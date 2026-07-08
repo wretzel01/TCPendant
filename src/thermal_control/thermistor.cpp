@@ -3,7 +3,9 @@
 
 namespace Thermistor {
 
-    // --- Configurable constants ---
+    // -----------------------------
+    // Configurable constants
+    // -----------------------------
     static int thermPin = 2;
 
     const float SERIES_RESISTOR      = 10000.0;

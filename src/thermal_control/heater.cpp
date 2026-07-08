@@ -2,52 +2,45 @@
 
 namespace Heater {
 
-    static int heaterPin = 3;
-    static int channel = 0;
-    static uint8_t currentPWM = 0;
+    static int heaterPin = 3;      // default MOSFET gate pin
+    static uint8_t lastPWM = 0;    // track last duty cycle
 
     // ---------------------------------------------------------
     // Initialization
     // ---------------------------------------------------------
-    void init(int pin, int pwmChannel, int pwmFreq, int pwmResolution) {
+    void init(int pin) {
         heaterPin = pin;
-        channel = pwmChannel;
-
-        // Configure PWM
-        ledcSetup(channel, pwmFreq, pwmResolution);
-        ledcAttachPin(heaterPin, channel);
-
-        // Start OFF
-        setPWM(0);
+        pinMode(heaterPin, OUTPUT);
+        off();  // ensure heater starts off
     }
 
     // ---------------------------------------------------------
     // Set PWM duty (0–255)
     // ---------------------------------------------------------
     void setPWM(uint8_t duty) {
-        currentPWM = duty;
-        ledcWrite(channel, duty);
+        lastPWM = duty;
+        analogWrite(heaterPin, duty);
     }
 
     // ---------------------------------------------------------
-    // Full power (255)
+    // Full power
     // ---------------------------------------------------------
     void onFull() {
         setPWM(255);
     }
 
     // ---------------------------------------------------------
-    // Heater OFF
+    // Turn heater off
     // ---------------------------------------------------------
     void off() {
         setPWM(0);
     }
 
     // ---------------------------------------------------------
-    // For debugging
+    // Debug accessor
     // ---------------------------------------------------------
-    uint8_t getCurrentPWM() {
-        return currentPWM;
+    uint8_t getLastPWM() {
+        return lastPWM;
     }
 
 }

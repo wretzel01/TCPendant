@@ -1,13 +1,25 @@
-#pragma once
+#ifndef THERMISTOR_H
+#define THERMISTOR_H
+
 #include <Arduino.h>
 
 namespace Thermistor {
 
+    // Initialize thermistor on a given ADC pin
     void init(int pin);
 
-    float readCelsius();          // returns filtered °C
-    float readRawCelsius();       // returns unfiltered °C
-    int   readADC();              // raw ADC value
+    // Read raw ADC value (0–4095)
+    int readADC();
 
-    bool  isFault(int rawADC);    // open/short detection
+    // Convert ADC → Celsius (unfiltered)
+    float readRawCelsius();
+
+    // Filtered Celsius reading (exponential smoothing)
+    float readCelsius();
+
+    // Basic fault detection (open/short)
+    bool isFault(int rawADC);
+
 }
+
+#endif

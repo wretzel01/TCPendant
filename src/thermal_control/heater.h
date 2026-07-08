@@ -1,13 +1,24 @@
-#pragma once
+#ifndef HEATER_H
+#define HEATER_H
+
 #include <Arduino.h>
 
 namespace Heater {
 
-    void init(int pin, int pwmChannel = 0, int pwmFreq = 5000, int pwmResolution = 8);
+    // Initialize heater MOSFET pin
+    void init(int pin);
 
-    void setPWM(uint8_t duty);   // 0–255
-    void onFull();               // 255
-    void off();                  // 0
+    // Set heater PWM (0–255)
+    void setPWM(uint8_t duty);
 
-    uint8_t getCurrentPWM();     // for debugging
+    // Full power (255)
+    void onFull();
+
+    // Turn heater off
+    void off();
+
+    // Debug accessor
+    uint8_t getLastPWM();
 }
+
+#endif

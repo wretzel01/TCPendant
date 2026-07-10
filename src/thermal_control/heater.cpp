@@ -30,6 +30,19 @@ namespace Heater {
     }
 
     // ---------------------------------------------------------
+    // Cruise power (maintenance mode)
+    // ---------------------------------------------------------
+    uint8_t cruisePWM = 170;
+
+    void setCruisePWM(uint8_t duty) {
+        cruisePWM = duty;
+    }
+
+    void onCruise() {
+        setPWM(cruisePWM);
+    }
+
+    // ---------------------------------------------------------
     // Turn heater off
     // ---------------------------------------------------------
     void off() {

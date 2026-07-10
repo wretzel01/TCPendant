@@ -24,36 +24,54 @@ namespace ThermalControl {
     // ---------------------------------------------------------
     void loop(float targetTemp, float hysteresis) {
 
-        // 1. Read raw temperature
         float rawTemp = Thermistor::readRawCelsius();
-
-        // 2. Apply user-configurable filtering
         float tempC = Filter::apply(rawTemp);
         lastTemp = tempC;
 
-        // 3. True hysteresis control (no chattering)
+        // --- Heating hysteresis (your original logic) ---
         static bool heating = false;
 
-        // Lower threshold: turn ON
         if (!heating && tempC < (targetTemp - hysteresis)) {
             heating = true;
         }
 
-        // Upper threshold: turn OFF
         if (heating && tempC > targetTemp) {
             heating = false;
         }
 
-        // Heater output
-        uint8_t pwm = heating ? 255 : 0;
+        // --- BOOST/CRUISE hysteresis (new logic) ---
+        static bool boostMode = false;
+
+        float heatingEnter = targetTemp - hysteresis;
+        float boostEnter   = heatingEnter - hysteresis;  // reuse hysteresis
+        float boostExit    = heatingEnter;               // reuse hysteresis
+
+        if (heating) {
+            if (!boostMode && tempC < boostEnter)
+                boostMode = true;
+
+            if (boostMode && tempC > boostExit)
+                boostMode = false;
+        } else {
+            boostMode = false;  // safety: no boost when heating is off
+        }
+
+        // --- Output ---
+        uint8_t pwm;
+
+        if (!heating)
+            pwm = 0;
+        else if (boostMode)
+            pwm = 255;
+        else
+            pwm = Heater::cruisePWM;
 
         Heater::setPWM(pwm);
         lastPWM = pwm;
 
-        // 4. Debug output (throttled)
+        // --- Debug print ---
         static unsigned long lastPrint = 0;
         unsigned long now = millis();
-
         if (now - lastPrint > 500) {
             Serial.print("Temp: ");
             Serial.print(tempC);
@@ -62,6 +80,7 @@ namespace ThermalControl {
             lastPrint = now;
         }
     }
+
 
     // ---------------------------------------------------------
     // Debug accessors

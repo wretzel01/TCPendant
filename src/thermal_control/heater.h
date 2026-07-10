@@ -14,6 +14,11 @@ namespace Heater {
     // Full power (255)
     void onFull();
 
+    // Cruise power (maintenance mode)
+    extern uint8_t cruisePWM;
+    void setCruisePWM(uint8_t duty);
+    void onCruise();
+
     // Turn heater off
     void off();
 

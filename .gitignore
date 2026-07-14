@@ -1,2 +1,19 @@
-.pio
-.vscode
+# PlatformIO
+.pio/
+
+# VS Code
+.vscode/
+
+# React Native app
+TCPendantApp/node_modules/
+TCPendantApp/android/
+TCPendantApp/ios/
+TCPendantApp/.bundle/
+
+# Build outputs
+build/
+dist/
+
+# Misc
+.DS_Store
+.env

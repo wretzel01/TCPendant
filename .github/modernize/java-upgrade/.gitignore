@@ -1,0 +1,32 @@
+
+# React Native
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Metro
+.bundle/
+
+# iOS
+ios/
+Pods/
+*.xcworkspace
+*.xcuserdata
+*.xcuserstate
+DerivedData/
+
+# Android
+android/
+*.apk
+*.aar
+*.iml
+.gradle/
+local.properties
+
+# Build outputs
+build/
+dist/
+
+# Misc
+.DS_Store
+.env

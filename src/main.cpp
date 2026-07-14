@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "thermal_control/thermal_control.h"
+#include "ble_connect/ble_connect.h"
 
 // -----------------------------
 // User‑configurable parameters
@@ -23,6 +24,7 @@ void setup() {
     Serial.println("\n=== Thermal Control v2 ===");
 
     ThermalControl::init(THERM_PIN, HEATER_PIN, filterAlpha);
+    BLEConnect::init();
 
     Serial.println("[main] Setup complete");
 }
@@ -33,8 +35,21 @@ void loop() {
     if (now - lastLoop >= LOOP_INTERVAL_MS) {
         lastLoop = now;
 
+        // --- Pull commands from BLE ---
+        targetTempC = BLEConnect::getTargetTemp();
+        uint8_t mode = BLEConnect::getMode();
+
+        // Optional: convert mode → cruisePWM here
+        // Heater::cruisePWM = computeCruisePWM(targetTempC);
+
+        // --- Run heater control ---
         ThermalControl::loop(targetTempC, hysteresisC);
+
+        // --- Push telemetry to BLE ---
+        BLEConnect::setCurrentTemp(ThermalControl::getLastTemperature());
+        BLEConnect::setCurrentPWM(ThermalControl::getLastPWM());
     }
 
-    // You can add UI, button handling, BLE, etc. here later.
+    // BLE housekeeping
+    BLEConnect::loop();
 }

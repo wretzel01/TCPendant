@@ -1,6 +1,14 @@
-import React, { createContext, useEffect, useRef, useState } from 'react';
-import { PermissionsAndroid } from 'react-native';
-import { manager, connectToPendant, subscribeToTelemetry, setTargetTemp, setMode } from './ble';
+import React, { createContext, useEffect, useRef, useState } from "react";
+import { PermissionsAndroid } from "react-native";
+
+import {
+  manager,
+  connectToPendant,
+  subscribeToTelemetry,
+  setTargetTemp,
+  setMode,
+  clearSubscriptions,
+} from "./ble";
 
 export const BLEContext = createContext(null);
 
@@ -12,7 +20,9 @@ export function BLEProvider({ children }) {
   const [currentTemp, setCurrentTemp] = useState(null);
   const [currentPWM, setCurrentPWM] = useState(null);
 
+  // -----------------------------
   // Permissions
+  // -----------------------------
   useEffect(() => {
     PermissionsAndroid.requestMultiple([
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
@@ -21,63 +31,77 @@ export function BLEProvider({ children }) {
     ]);
   }, []);
 
+  // -----------------------------
   // Scan + connect + subscribe
+  // -----------------------------
   useEffect(() => {
     const subscription = manager.onStateChange((state) => {
-      if (state === 'PoweredOn') {
-        manager.startDeviceScan(null, null, async (error, device) => {
-          if (error) return;
+      if (state !== "PoweredOn") return;
 
-          if (device?.name === 'TCPendant') {
-            setFound(true);
-            manager.stopDeviceScan();
+      manager.startDeviceScan(null, null, async (error, device) => {
+        if (error) return;
 
-            const connectedDevice = await connectToPendant(device);
-            deviceRef.current = connectedDevice;
-            setConnected(true);
+        if (device?.name === "TCPendant") {
+          console.log("Found TCPendant");
+          setFound(true);
+          manager.stopDeviceScan();
 
-            subscribeToTelemetry(
-              connectedDevice,
-              (temp) => setCurrentTemp(temp),
-              (pwm) => setCurrentPWM(pwm)
-            );
+          // -----------------------------
+          // CONNECT with reconnect callback
+          // -----------------------------
+          const connectedDevice = await connectToPendant(
+            device,
+            async (newDevice) => {
+              console.log("Reconnect callback fired");
 
-            connectedDevice.onDisconnected(async () => {
-              try {
-                const newDevice = await connectedDevice.connect();
-                await newDevice.discoverAllServicesAndCharacteristics();
+              // Kill stale subscriptions BEFORE resubscribing
+              clearSubscriptions();
 
-                deviceRef.current = newDevice;
+              // Update deviceRef
+              deviceRef.current = newDevice;
+              setConnected(true);
 
-                subscribeToTelemetry(
-                  newDevice,
-                  (temp) => setCurrentTemp(temp),
-                  (pwm) => setCurrentPWM(pwm)
-                );
+              // Subscribe to telemetry on NEW device
+              await subscribeToTelemetry(newDevice, (pkt) => {
+                setCurrentTemp(pkt.temp);
+                setCurrentPWM(pkt.pwm);
+              });
+            }
+          );
 
-                setConnected(true);
-              } catch {
-                setConnected(false);
-              }
-            });
-          }
-        });
-      }
+          // -----------------------------
+          // INITIAL CONNECTION
+          // -----------------------------
+          deviceRef.current = connectedDevice;
+          setConnected(true);
+
+          // Kill stale subs from previous app runs
+          clearSubscriptions();
+
+          // Subscribe to telemetry on initial device
+          await subscribeToTelemetry(connectedDevice, (pkt) => {
+            setCurrentTemp(pkt.temp);
+            setCurrentPWM(pkt.pwm);
+          });
+        }
+      });
     }, true);
 
     return () => subscription.remove();
   }, []);
 
   return (
-    <BLEContext.Provider value={{
-      found,
-      connected,
-      currentTemp,
-      currentPWM,
-      device: deviceRef.current,
-      setTargetTemp,
-      setMode
-    }}>
+    <BLEContext.Provider
+      value={{
+        found,
+        connected,
+        currentTemp,
+        currentPWM,
+        device: deviceRef.current,
+        setTargetTemp,
+        setMode,
+      }}
+    >
       {children}
     </BLEContext.Provider>
   );

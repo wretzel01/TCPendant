@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include "thermal_control/thermal_control.h"
 #include "ble_connect/ble_connect.h"
+#include "ble_connect/ble_protocol.h"
+#include "ble_connect/ble_telemetry.h"
 
 // -----------------------------
 // User‑configurable parameters
@@ -35,21 +37,22 @@ void loop() {
     if (now - lastLoop >= LOOP_INTERVAL_MS) {
         lastLoop = now;
 
-        // --- Pull commands from BLE ---
-        targetTempC = BLEConnect::getTargetTemp();
-        uint8_t mode = BLEConnect::getMode();
+        targetTempC = BLEProtocol::getTargetTemp();
+        uint8_t mode = BLEProtocol::getMode();
 
-        // Optional: convert mode → cruisePWM here
-        // Heater::cruisePWM = computeCruisePWM(targetTempC);
-
-        // --- Run heater control ---
         ThermalControl::loop(targetTempC, hysteresisC);
 
-        // --- Push telemetry to BLE ---
-        BLEConnect::setCurrentTemp(ThermalControl::getLastTemperature());
-        BLEConnect::setCurrentPWM(ThermalControl::getLastPWM());
+        BLEProtocol::updateCurrentTemp(ThermalControl::getLastTemperature());
+        BLEProtocol::updateCurrentPWM(ThermalControl::getLastPWM());
+
+        BLETelemetry::loop();
     }
 
-    // BLE housekeeping
     BLEConnect::loop();
+
+    // Give NimBLE a chance even if CDC is misbehaving
+    delay(1);
 }
+
+
+

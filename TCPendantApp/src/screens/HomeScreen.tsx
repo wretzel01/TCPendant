@@ -1,10 +1,21 @@
 import React, { useContext } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
+
 import { BLEContext } from '../BLEProvider';
 
-import ControlButton from '../components/common/ControlButton';
+// Zones
+import ConnectionBanner from '../components/status/ConnectionBanner';
+
+// Hero
+import HeroGauge from '../components/hero/HeroGauge';
+
+// Controls
+import TempWheel from '../components/controls/TempWheel';
+
+// Common UI
+import ScreenContainer from '../components/common/ScreenContainer';
 import Section from '../components/common/Section';
-import TelemetryDisplay from '../components/hero/TelemetryDisplay';
+import ControlButton from '../components/common/ControlButton';
 
 export default function HomeScreen() {
   const {
@@ -18,27 +29,23 @@ export default function HomeScreen() {
   } = useContext(BLEContext);
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: 'black',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingTop: 40,
-      }}
-    >
-      <Text style={{ color: 'white', fontSize: 24, marginBottom: 20 }}>
-        {connected
-          ? `Connected to TCPendant`
-          : found
-            ? `Found TCPendant, connecting...`
-            : `Scanning for TCPendant...`}
-      </Text>
+    <ScreenContainer>
 
+      {/* STATUS ZONE */}
+      <ConnectionBanner connected={connected} />
+
+      {/* HERO ZONE */}
+        {connected && (
+          <View style={{ alignItems: 'center' }}>
+            <HeroGauge temp={currentTemp} pwm={currentPWM} />
+          </View>
+        )}
+
+
+      {/* CONTROL ZONE */}
       {connected && (
         <>
-          <TelemetryDisplay temp={currentTemp} pwm={currentPWM} />
-
+          {/* Target Temp */}
           <Section title="Set Target Temp">
             <View style={{ flexDirection: 'row' }}>
               <ControlButton
@@ -52,6 +59,7 @@ export default function HomeScreen() {
             </View>
           </Section>
 
+          {/* Mode */}
           <Section title="Set Mode">
             <View style={{ flexDirection: 'row' }}>
               <ControlButton
@@ -66,6 +74,10 @@ export default function HomeScreen() {
           </Section>
         </>
       )}
-    </View>
+
+      {/* SYSTEM ZONE (empty for now) */}
+      {/* Future: FirmwareInfo, DebugPanel, OTA, etc. */}
+
+    </ScreenContainer>
   );
 }

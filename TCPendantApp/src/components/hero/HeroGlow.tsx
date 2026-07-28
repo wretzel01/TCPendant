@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
 import { Easing } from 'react-native';
 
-import glowdotImg from '../../assets/glowdot.png';
+import glowringImg from '../../assets/glowring.png';
 
 // Temperature → color stops
 const TEMP_COLORS = [
@@ -57,7 +57,7 @@ export default function HeroGlow({ temp, pwm, size }) {
 
   return (
     <Animated.Image
-      source={glowdotImg}
+      source={glowringImg}
       style={{
         position: 'absolute',
         width: size,

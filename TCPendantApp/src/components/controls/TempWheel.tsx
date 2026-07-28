@@ -1,130 +1,161 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, Animated, PanResponder, Pressable } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, Pressable, Animated, Image } from 'react-native';
+import { getTempColor } from './TempColor';
+import glowdotImg from '../../assets/glowdot.png';
 
-export default function TempWheel({ value, onChange }) {
-  const MIN = 35;
-  const MAX = 50;
+const glowSize = 240;
 
-  const temps = [];
-  for (let t = MIN; t <= MAX; t++) temps.push(t);
+export default function TempWheel({ device, onChange }) {
+  const [temp, setTemp] = useState(40);
 
-  // Local state for selected temp (safe, stable)
-  const [selected, setSelected] = useState(value);
+  const scale = useRef(new Animated.Value(1)).current;
 
-  // Animated scroll position (in index units)
-  const scroll = useRef(new Animated.Value(value - MIN)).current;
-
-  // Debounce timer
-  const commitTimer = useRef(null);
-
-  // Convert scroll → nearest temp
-  const tempForScroll = (s) => {
-    const clamped = Math.max(0, Math.min(temps.length - 1, s));
-    return MIN + Math.round(clamped);
+  const bump = () => {
+    Animated.sequence([
+      Animated.timing(scale, {
+        toValue: 1.08,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1.0,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
-  // Commit BLE update only after stable
-  const commitTemp = (t) => {
-    clearTimeout(commitTimer.current);
-    commitTimer.current = setTimeout(() => {
-      onChange(t); // BLE write ONCE
-    }, 250);
+  const changeTemp = (delta: number) => {
+    const next = Math.min(45, Math.max(35, temp + delta));
+    setTemp(next);
+    bump();
+    onChange(device, next);
   };
 
-  // Gesture handler
-  const pan = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gesture) => {
-        const delta = gesture.dy * 0.05; // smoothing
-        const newScroll = selected - MIN + delta;
-
-        Animated.timing(scroll, {
-          toValue: newScroll,
-          duration: 0,
-          useNativeDriver: false,
-        }).start();
-
-        const newTemp = tempForScroll(newScroll);
-        setSelected(newTemp);
-        commitTemp(newTemp);
-      },
-      onPanResponderRelease: () => {
-        Animated.spring(scroll, {
-          toValue: selected - MIN,
-          useNativeDriver: false,
-          speed: 10,
-          bounciness: 6,
-        }).start();
-      },
-    })
-  ).current;
-
-  // Sync external value → internal state
-  useEffect(() => {
-    setSelected(value);
-    Animated.spring(scroll, {
-      toValue: value - MIN,
-      useNativeDriver: false,
-      speed: 10,
-      bounciness: 6,
-    }).start();
-  }, [value]);
+  const tint = getTempColor(temp);
 
   return (
     <View
       style={{
-        width: 120,
-        height: 150,
-        overflow: 'hidden',
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        gap: 30,
+        paddingVertical: 20,
       }}
-      {...pan.panHandlers}
     >
-      {temps.map((t, i) => {
-        const isSelected = t === selected;
+      {/* MINUS BUTTON + BLUE GLOWDOT */}
+      <View
+        style={{
+          position: 'relative',
+          width: 60,
+          height: 60,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <Image
+          source={glowdotImg}
+          style={{
+            position: 'absolute',
+            width: glowSize,
+            height: glowSize,
+            tintColor: 'rgb(42, 72, 171)',
+            opacity: 0.55,
 
-        return (
-          <Pressable
-            key={t}
-            onPress={() => {
-              setSelected(t);
-              commitTemp(t);
+            // ⭐ Center the glowdot behind the button
+            left: '50%',
+            top: '50%',
+            transform: [
+              { translateX: -glowSize / 2 },
+              { translateY: -glowSize / 2 },
+            ],
+          }}
+        />
+        <Pressable
+          onPress={() => changeTemp(-1)}
+          style={({ pressed }) => ({
+            width: 60,
+            height: 60,
+            borderRadius: 30,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: pressed ? '#333' : '#222',
+          })}
+        >
+          <Text style={{ color: 'white', fontSize: 28 }}>−</Text>
+        </Pressable>
+      </View>
 
-              Animated.spring(scroll, {
-                toValue: t - MIN,
-                useNativeDriver: false,
-                speed: 10,
-                bounciness: 6,
-              }).start();
-            }}
-            style={{
-              height: 50,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <Animated.Text
-              style={{
-                fontSize: isSelected ? 32 : 22,
-                color: isSelected ? 'white' : '#777',
-                fontWeight: isSelected ? '700' : '400',
-                transform: [
-                  {
-                    translateY: scroll.interpolate({
-                      inputRange: [i - 1, i, i + 1],
-                      outputRange: [-50, 0, 50],
-                      extrapolate: 'clamp',
-                    }),
-                  },
-                ],
-              }}
-            >
-              {t}
-            </Animated.Text>
-          </Pressable>
-        );
-      })}
+      {/* TEMPERATURE DISPLAY */}
+      <Animated.View
+        style={{
+          transform: [{ scale }],
+          paddingHorizontal: 28,
+          paddingVertical: 12,
+          backgroundColor: '#1a1a1a',
+          borderRadius: 14,
+          borderWidth: 2,
+          borderColor: tint,
+          shadowColor: tint,
+          shadowOpacity: 0.25,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 0 },
+        }}
+      >
+        <Text
+          style={{
+            color: 'white',
+            fontSize: 34,
+            fontWeight: '700',
+          }}
+        >
+          {temp}°C
+        </Text>
+      </Animated.View>
+
+      {/* PLUS BUTTON + RED GLOWDOT */}
+      <View
+        style={{
+          position: 'relative',
+          width: 60,
+          height: 60,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <Image
+          source={glowdotImg}
+          style={{
+            position: 'absolute',
+            width: glowSize,
+            height: glowSize,
+            tintColor: 'rgb(182, 36, 56)',
+            opacity: 0.55,
+
+            // ⭐ Center the glowdot behind the button
+            left: '50%',
+            top: '50%',
+            transform: [
+              { translateX: -glowSize / 2 },
+              { translateY: -glowSize / 2 },
+            ],
+          }}
+        />
+        <Pressable
+          onPress={() => changeTemp(1)}
+          style={({ pressed }) => ({
+            width: 60,
+            height: 60,
+            borderRadius: 30,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: pressed ? '#333' : '#222',
+          })}
+        >
+          <Text style={{ color: 'white', fontSize: 28 }}>+</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

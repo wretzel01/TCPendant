@@ -17,6 +17,11 @@ export function BLEProvider({ children }) {
 
   const [found, setFound] = useState(false);
   const [connected, setConnected] = useState(false);
+
+  // ⭐ NEW STATES
+  const [connecting, setConnecting] = useState(false);
+  const [disconnected, setDisconnected] = useState(false);
+
   const [currentTemp, setCurrentTemp] = useState(null);
   const [currentPWM, setCurrentPWM] = useState(null);
 
@@ -38,12 +43,19 @@ export function BLEProvider({ children }) {
     const subscription = manager.onStateChange((state) => {
       if (state !== "PoweredOn") return;
 
+      // ⭐ Reset states
+      setFound(false);
+      setConnected(false);
+      setConnecting(false);
+      setDisconnected(false);
+
       manager.startDeviceScan(null, null, async (error, device) => {
         if (error) return;
 
         if (device?.name === "TCPendant") {
           console.log("Found TCPendant");
           setFound(true);
+          setConnecting(true);
           manager.stopDeviceScan();
 
           // -----------------------------
@@ -54,17 +66,28 @@ export function BLEProvider({ children }) {
             async (newDevice) => {
               console.log("Reconnect callback fired");
 
-              // Kill stale subscriptions BEFORE resubscribing
               clearSubscriptions();
 
-              // Update deviceRef
               deviceRef.current = newDevice;
               setConnected(true);
+              setConnecting(false);
+              setDisconnected(false);
 
-              // Subscribe to telemetry on NEW device
               await subscribeToTelemetry(newDevice, (pkt) => {
                 setCurrentTemp(pkt.temp);
                 setCurrentPWM(pkt.pwm);
+              });
+
+              // ⭐ Listen for disconnects
+              newDevice.onDisconnected(() => {
+                console.log("Device disconnected");
+                setConnected(false);
+                setDisconnected(true);
+                setConnecting(false);
+                deviceRef.current = null;
+
+                // Restart scan automatically
+                manager.startDeviceScan(null, null, () => {});
               });
             }
           );
@@ -74,14 +97,26 @@ export function BLEProvider({ children }) {
           // -----------------------------
           deviceRef.current = connectedDevice;
           setConnected(true);
+          setConnecting(false);
+          setDisconnected(false);
 
-          // Kill stale subs from previous app runs
           clearSubscriptions();
 
-          // Subscribe to telemetry on initial device
           await subscribeToTelemetry(connectedDevice, (pkt) => {
             setCurrentTemp(pkt.temp);
             setCurrentPWM(pkt.pwm);
+          });
+
+          // ⭐ Listen for disconnects
+          connectedDevice.onDisconnected(() => {
+            console.log("Device disconnected");
+            setConnected(false);
+            setDisconnected(true);
+            setConnecting(false);
+            deviceRef.current = null;
+
+            // Restart scan automatically
+            manager.startDeviceScan(null, null, () => {});
           });
         }
       });
@@ -95,6 +130,8 @@ export function BLEProvider({ children }) {
       value={{
         found,
         connected,
+        connecting,
+        disconnected,
         currentTemp,
         currentPWM,
         device: deviceRef.current,

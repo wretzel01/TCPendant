@@ -47,30 +47,10 @@ export default function HomeScreen() {
         <>
           {/* Target Temp */}
           <Section title="Set Target Temp">
-            <View style={{ flexDirection: 'row' }}>
-              <ControlButton
-                label="35°C"
-                onPress={() => setTargetTemp(device, 35)}
-              />
-              <ControlButton
-                label="40°C"
-                onPress={() => setTargetTemp(device, 40)}
-              />
-            </View>
-          </Section>
-
-          {/* Mode */}
-          <Section title="Set Mode">
-            <View style={{ flexDirection: 'row' }}>
-              <ControlButton
-                label="Off"
-                onPress={() => setMode(device, 0)}
-              />
-              <ControlButton
-                label="Heat"
-                onPress={() => setMode(device, 1)}
-              />
-            </View>
+            <TempWheel
+              device={device}
+              onChange={setTargetTemp}
+            />
           </Section>
         </>
       )}

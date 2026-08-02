@@ -8,7 +8,7 @@
 #include "esp_gap_ble_api.h"
 
 // ---------------------------------------------------------
-// Internal characteristic pointers
+// Characteristics
 // ---------------------------------------------------------
 NimBLECharacteristic* charTargetTemp = nullptr;
 NimBLECharacteristic* charMode       = nullptr;
@@ -17,7 +17,7 @@ NimBLECharacteristic* charCurPWM     = nullptr;
 NimBLECharacteristic* charStateSync  = nullptr;
 
 // ---------------------------------------------------------
-// Server Callbacks (NO override — your NimBLE version requires this)
+// Server Callbacks (no watchdog)
 // ---------------------------------------------------------
 class ServerCallbacks : public NimBLEServerCallbacks {
     void onConnect(NimBLEServer* s, ble_gap_conn_desc* desc) {
@@ -26,9 +26,18 @@ class ServerCallbacks : public NimBLEServerCallbacks {
 
     void onDisconnect(NimBLEServer* s, ble_gap_conn_desc* desc) {
         Serial.println("BLE: Disconnected");
-
         BLEProtocol::applyMode(0);
-        s->startAdvertising();
+        s->startAdvertising();   // always advertise when not connected
+    }
+};
+
+// ---------------------------------------------------------
+// ⭐ Kick Callback — forces advertising restart
+// ---------------------------------------------------------
+class KickCallback : public NimBLECharacteristicCallbacks {
+    void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& info) override {
+        Serial.println("[BLE] Kick received → restarting advertising");
+        NimBLEDevice::startAdvertising();
     }
 };
 
@@ -37,7 +46,6 @@ class ServerCallbacks : public NimBLEServerCallbacks {
 // ---------------------------------------------------------
 void BLEInit::setup() {
     WiFi.mode(WIFI_OFF);
-
     esp_ble_gap_config_local_privacy(false);
 
     NimBLEDevice::init("TCPendant");
@@ -46,14 +54,39 @@ void BLEInit::setup() {
     NimBLEServer* server = NimBLEDevice::createServer();
     server->setCallbacks(new ServerCallbacks());
 
-    NimBLEService* svc = server->createService("1234");
+    NimBLEService* svc = server->createService("00001234-0000-1000-8000-00805f9b34fb");
 
+    // ---------------------------------------------------------
+    // Thermal + Mode
+    // ---------------------------------------------------------
     charTargetTemp = svc->createCharacteristic("1235",
         NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
 
     charMode = svc->createCharacteristic("1236",
         NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
 
+    // ---------------------------------------------------------
+    // LED Controls
+    // ---------------------------------------------------------
+    NimBLECharacteristic* charLEDColor =
+        svc->createCharacteristic("1240",
+            NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
+
+    NimBLECharacteristic* charLEDAnimation =
+        svc->createCharacteristic("1241",
+            NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
+
+    NimBLECharacteristic* charLEDTheme =
+        svc->createCharacteristic("1242",
+            NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
+
+    NimBLECharacteristic* charLEDBrightness =
+        svc->createCharacteristic("1243",
+            NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
+
+    // ---------------------------------------------------------
+    // Telemetry
+    // ---------------------------------------------------------
     charCurTemp = svc->createCharacteristic("1237",
         NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
 
@@ -67,13 +100,38 @@ void BLEInit::setup() {
     charCurPWM->createDescriptor("2902");
     charStateSync->createDescriptor("2902");
 
+    // ---------------------------------------------------------
+    // ⭐ Kick Characteristic
+    // ---------------------------------------------------------
+    NimBLECharacteristic* charKick =
+        svc->createCharacteristic("1244",
+            NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
+
+    // ---------------------------------------------------------
+    // Start service
+    // ---------------------------------------------------------
     svc->start();
 
-    BLECallbacks::registerCallbacks(charTargetTemp, charMode);
+    // ---------------------------------------------------------
+    // Register callbacks
+    // ---------------------------------------------------------
+    BLECallbacks::registerCallbacks(
+        charTargetTemp,
+        charMode,
+        charLEDColor,
+        charLEDAnimation,
+        charLEDTheme,
+        charLEDBrightness
+    );
 
+    charKick->setCallbacks(new KickCallback());
+
+    // ---------------------------------------------------------
+    // Advertising
+    // ---------------------------------------------------------
     NimBLEAdvertisementData advData;
     advData.setName("TCPendant");
-    advData.setCompleteServices(NimBLEUUID("1234"));
+    advData.setCompleteServices(NimBLEUUID("00001234-0000-1000-8000-00805f9b34fb"));
 
     NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
     adv->setAdvertisementData(advData);

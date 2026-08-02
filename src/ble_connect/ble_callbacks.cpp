@@ -5,8 +5,9 @@
 #include <NimBLEDevice.h>
 
 // ---------------------------------------------------------
-// TargetTemp Write Callback
+// Existing characteristic callbacks (unchanged)
 // ---------------------------------------------------------
+
 class TargetTempCallback : public NimBLECharacteristicCallbacks {
     void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& connInfo) override {
         const std::string raw = c->getValue();
@@ -14,55 +15,109 @@ class TargetTempCallback : public NimBLECharacteristicCallbacks {
         Serial.println(raw.c_str());
 
         float t = atof(raw.c_str());
-
-        // Validation
         if (t < 35.0f || t > 45.0f) {
             Serial.println("BLE: TargetTemp out of range, ignoring");
             return;
         }
 
-        Serial.print("BLE: Parsed TargetTemp = ");
-        Serial.println(t);
-
         BLEProtocol::applyTargetTemp(t);
     }
 };
 
-// ---------------------------------------------------------
-// Mode Write Callback
-// ---------------------------------------------------------
 class ModeCallback : public NimBLECharacteristicCallbacks {
     void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& connInfo) override {
         const std::string raw = c->getValue();
         Serial.print("BLE: Raw Mode = ");
         Serial.println(raw.c_str());
 
-        if (raw.empty()) {
-            Serial.println("BLE: Empty mode write, ignoring");
-            return;
-        }
+        if (raw.empty()) return;
 
         uint8_t m = raw[0];
-
-        // Validation
         if (m > 1) {
             Serial.println("BLE: Invalid mode, ignoring");
             return;
         }
 
-        Serial.print("BLE: Parsed Mode = ");
-        Serial.println(m);
-
         BLEProtocol::applyMode(m);
     }
 };
 
+class LEDColorCallback : public NimBLECharacteristicCallbacks {
+    void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& connInfo) override {
+        std::string raw = c->getValue();
+        Serial.print("BLE: Raw LEDColor bytes = ");
+        Serial.println(raw.length());
+
+        if (raw.length() != 3) {
+            Serial.println("BLE: LEDColor invalid length");
+            return;
+        }
+
+        BLEProtocol::applyLEDColor(raw[0], raw[1], raw[2]);
+    }
+};
+
+class LEDAnimationCallback : public NimBLECharacteristicCallbacks {
+    void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& connInfo) override {
+        std::string raw = c->getValue();
+        if (raw.empty()) return;
+
+        uint8_t id = raw[0];
+        Serial.printf("BLE: Parsed LEDAnimation = %u\n", id);
+
+        if (id > ANIM_RAINBOW) {
+            Serial.println("BLE: LEDAnimation out of range");
+            return;
+        }
+
+        BLEProtocol::applyLEDAnimation((AnimationId)id);
+    }
+};
+
+class LEDThemeCallback : public NimBLECharacteristicCallbacks {
+    void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& connInfo) override {
+        std::string raw = c->getValue();
+        if (raw.empty()) return;
+
+        uint8_t id = raw[0];
+        Serial.printf("BLE: Parsed LEDTheme = %u\n", id);
+
+        if (id >= THEME_COUNT) {
+            Serial.println("BLE: LEDTheme out of range");
+            return;
+        }
+
+        BLEProtocol::applyLEDTheme((ThemeId)id);
+    }
+};
+
+class LEDBrightnessCallback : public NimBLECharacteristicCallbacks {
+    void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& connInfo) override {
+        std::string raw = c->getValue();
+        if (raw.empty()) return;
+
+        uint8_t b = raw[0];
+        Serial.printf("BLE: Parsed LEDBrightness = %u\n", b);
+
+        BLEProtocol::applyLEDBrightness(b);
+    }
+};
+
 // ---------------------------------------------------------
-// Register Callbacks
+// Register characteristic callbacks
 // ---------------------------------------------------------
-void BLECallbacks::registerCallbacks(NimBLECharacteristic* charTargetTemp,
-                                     NimBLECharacteristic* charMode)
-{
+void BLECallbacks::registerCallbacks(
+    NimBLECharacteristic* charTargetTemp,
+    NimBLECharacteristic* charMode,
+    NimBLECharacteristic* charLEDColor,
+    NimBLECharacteristic* charLEDAnimation,
+    NimBLECharacteristic* charLEDTheme,
+    NimBLECharacteristic* charLEDBrightness
+) {
     charTargetTemp->setCallbacks(new TargetTempCallback());
     charMode->setCallbacks(new ModeCallback());
+    charLEDColor->setCallbacks(new LEDColorCallback());
+    charLEDAnimation->setCallbacks(new LEDAnimationCallback());
+    charLEDTheme->setCallbacks(new LEDThemeCallback());
+    charLEDBrightness->setCallbacks(new LEDBrightnessCallback());
 }

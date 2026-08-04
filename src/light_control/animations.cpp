@@ -2,14 +2,29 @@
 #include <Arduino.h>
 
 // ---------------------------------------------
-// Global animation state (one LED = one state)
+// Global animation state
 // ---------------------------------------------
 static AnimationState animState;
+static AnimationId currentAnim = ANIM_NONE;
+
+// ---------------------------------------------
+// Reset animation state
+// ---------------------------------------------
+static void resetState(AnimationState& s) {
+    s.phase = 0;
+    s.lastUpdate = 0;
+}
 
 // ---------------------------------------------
 // Animation router
 // ---------------------------------------------
 Color Animations::run(AnimationId id, const Color& base) {
+
+    if (id != currentAnim) {
+        resetState(animState);
+        currentAnim = id;
+    }
+
     switch (id) {
         case ANIM_STATIC:   return base;
         case ANIM_BREATHE:  return breathe(base, animState);
@@ -22,82 +37,126 @@ Color Animations::run(AnimationId id, const Color& base) {
 }
 
 // ---------------------------------------------
-// Breathe animation (smooth sinusoidal)
+// Breathe (AMPLIFIED)
 // ---------------------------------------------
 Color Animations::breathe(const Color& base, AnimationState& s) {
     uint32_t now = millis();
-    if (now - s.lastUpdate < 20) return base;
     s.lastUpdate = now;
 
-    s.phase += 0.03f;
-    float intensity = (sin(s.phase) + 1.0f) * 0.5f;  // 0–1
-    intensity = intensity * 0.6f + 0.2f;            // soften
+    // VERY slow phase increment
+    s.phase = (s.phase + 1) % 2048;   // 2048 steps = ~5 seconds
 
-    return scale(base, intensity);
+    float x = s.phase / 2048.0f;
+
+    // soft breathing curve
+    float intensity = (sin(x * PI * 2) + 1.0f) * 0.5f;  // 0 → 1
+    intensity = pow(intensity, 1.8f);                   // soften
+
+    return {
+        (uint8_t)(base.r * intensity),
+        (uint8_t)(base.g * intensity),
+        (uint8_t)(base.b * intensity)
+    };
 }
 
 // ---------------------------------------------
-// Pulse animation (sharp rise, slow fall)
+// Pulse (AMPLIFIED)
 // ---------------------------------------------
 Color Animations::pulse(const Color& base, AnimationState& s) {
     uint32_t now = millis();
-    if (now - s.lastUpdate < 20) return base;
     s.lastUpdate = now;
 
-    s.phase += 0.05f;
+    // 1000 steps = ~1 second fade
+    s.phase = (s.phase + 1) % 1500;
 
-    float t = fmod(s.phase, 1.0f);
-    float intensity = (t < 0.2f)
-        ? (t / 0.2f)            // fast rise
-        : (1.0f - (t - 0.2f) / 0.8f); // slow fall
+    float x = s.phase / 1500.0f;
 
-    return scale(base, intensity);
+    float intensity;
+
+    if (s.phase == 0) {
+        // instant flash
+        intensity = 1.0f;
+    } else {
+        // smooth fade-out
+        intensity = 1.0f - x;
+    }
+
+    return {
+        (uint8_t)(base.r * intensity),
+        (uint8_t)(base.g * intensity),
+        (uint8_t)(base.b * intensity)
+    };
 }
 
 // ---------------------------------------------
-// Flicker animation (random fire-like jitter)
+// Flicker (AMPLIFIED)
 // ---------------------------------------------
 Color Animations::flicker(const Color& base, AnimationState& s) {
     uint32_t now = millis();
-    if (now - s.lastUpdate < 30) return base;
     s.lastUpdate = now;
 
-    float intensity = 0.7f + (random(-30, 30) / 100.0f); // 0.4–1.0
-    if (intensity < 0.4f) intensity = 0.4f;
-    if (intensity > 1.0f) intensity = 1.0f;
+    // Random trigger: 10% chance per frame
+    if (random(0, 100) < 10) {
+        s.sparkleIntensity = 128;   // 50% brightness
+    }
 
-    return scale(base, intensity);
+    // Fade from 50% → 0%
+    if (s.sparkleIntensity > 0) {
+        s.sparkleIntensity -= 4;    // adjust fade speed here
+        if (s.sparkleIntensity < 0) s.sparkleIntensity = 0;
+    }
+
+    float intensity = s.sparkleIntensity / 255.0f;  // 0.5 → 0.0
+
+    return {
+        (uint8_t)(base.r * intensity),
+        (uint8_t)(base.g * intensity),
+        (uint8_t)(base.b * intensity)
+    };
 }
-
 // ---------------------------------------------
-// Twinkle animation (random sparkle bursts)
+// Twinkle (AMPLIFIED)
 // ---------------------------------------------
 Color Animations::twinkle(const Color& base, AnimationState& s) {
     uint32_t now = millis();
-    if (now - s.lastUpdate < 40) return base;
+
+    // Slower update rate (slow motion)
+    if (now - s.lastUpdate < 80) return s.lastColor;
     s.lastUpdate = now;
 
-    float t = random(0, 100) / 100.0f; // 0–1
-    float intensity = (t > 0.85f) ? 1.0f : 0.3f; // occasional sparkle
+    // Same chaotic randomness as flicker, but slightly narrower
+    int intensity = random(0, 200);   // chaotic but softer
 
-    return scale(base, intensity);
+    Color out = {
+        (uint8_t)((base.r * intensity) >> 8),
+        (uint8_t)((base.g * intensity) >> 8),
+        (uint8_t)((base.b * intensity) >> 8)
+    };
+
+    s.lastColor = out;
+    return out;
 }
 
 // ---------------------------------------------
-// Rainbow animation (HSV-like cycling)
+// Rainbow (unchanged — already visible)
 // ---------------------------------------------
 Color Animations::rainbow(AnimationState& s) {
     uint32_t now = millis();
-    if (now - s.lastUpdate < 20) return COLOR_RED;
+    if (now - s.lastUpdate < 15) return {255, 0, 0};
     s.lastUpdate = now;
 
-    s.phase += 0.02f;
-    float t = fmod(s.phase, 1.0f);
+    s.phase = (s.phase + 4) % 768;
 
-    // Simple HSV → RGB approximation
-    uint8_t r = (uint8_t)(sin(t * 6.28f) * 127 + 128);
-    uint8_t g = (uint8_t)(sin((t + 0.33f) * 6.28f) * 127 + 128);
-    uint8_t b = (uint8_t)(sin((t + 0.66f) * 6.28f) * 127 + 128);
+    int section = s.phase / 256;
+    int offset  = s.phase % 256;
+
+    uint8_t r, g, b;
+
+    switch (section) {
+        case 0: r = 255 - offset; g = offset;       b = 0;         break;
+        case 1: r = 0;            g = 255 - offset; b = offset;    break;
+        case 2: r = offset;       g = 0;            b = 255 - offset; break;
+    }
 
     return {r, g, b};
 }

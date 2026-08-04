@@ -6,7 +6,7 @@
 // Internal state — thermal
 // ---------------------------------------------------------
 static float targetTemp = 40.0f;
-static uint8_t mode = 0;
+static uint8_t mode = 1;
 
 static float currentTemp = 0.0f;
 static uint8_t currentPWM = 0;
@@ -20,7 +20,7 @@ static uint8_t ledR = 255;
 static uint8_t ledG = 80;
 static uint8_t ledB = 0;
 
-static AnimationId ledAnimation = ANIM_STATIC;
+static AnimationId ledAnimation = ANIM_FLICKER;
 static ThemeId ledTheme = THEME_AMBER;
 
 static uint8_t ledBrightness = 255;
@@ -43,7 +43,7 @@ void BLEProtocol::applyTargetTemp(float t) {
 // Apply incoming mode
 // ---------------------------------------------------------
 void BLEProtocol::applyMode(uint8_t m) {
-    if (m > 1) return;
+    if (m > 2) return;
 
     mode = m;
     cmdVersion++;

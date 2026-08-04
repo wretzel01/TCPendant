@@ -1,5 +1,6 @@
 #include "ble_callbacks.h"
 #include "ble_protocol.h"
+#include "light_control/light_control.h"
 
 #include <Arduino.h>
 #include <NimBLEDevice.h>
@@ -33,7 +34,7 @@ class ModeCallback : public NimBLECharacteristicCallbacks {
         if (raw.empty()) return;
 
         uint8_t m = raw[0];
-        if (m > 1) {
+        if (m > 2) {
             Serial.println("BLE: Invalid mode, ignoring");
             return;
         }
@@ -88,8 +89,10 @@ class LEDThemeCallback : public NimBLECharacteristicCallbacks {
         }
 
         BLEProtocol::applyLEDTheme((ThemeId)id);
+        LightControl::setTheme((ThemeId)id);
     }
 };
+
 
 class LEDBrightnessCallback : public NimBLECharacteristicCallbacks {
     void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& connInfo) override {

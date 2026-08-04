@@ -25,10 +25,9 @@ enum ThemeId : uint8_t {
 // Theme struct
 // ---------------------------------------------
 struct Theme {
-    Color base;             // base color
-    AnimationId animation;  // animation behavior
-    const Palette* palette; // optional palette
-    uint8_t brightness;     // 0–255
+    Color base;
+    AnimationId animation;
+    uint8_t brightness;
 };
 
 // ---------------------------------------------

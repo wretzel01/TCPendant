@@ -2,15 +2,13 @@
 #include "thermistor.h"
 #include "heater.h"
 #include "filter.h"
+#include "ble_connect/ble_protocol.h"
 
 namespace ThermalControl {
 
     static float lastTemp = NAN;
     static uint8_t lastPWM = 0;
 
-    // ---------------------------------------------------------
-    // Initialization
-    // ---------------------------------------------------------
     void init(int thermPin, int heaterPin, float filterAlpha) {
         Thermistor::init(thermPin);
         Heater::init(heaterPin);
@@ -19,72 +17,65 @@ namespace ThermalControl {
         Serial.println("[ThermalControl] Initialized");
     }
 
-    // ---------------------------------------------------------
-    // Main control loop
-    // ---------------------------------------------------------
-    void loop(float targetTemp, float hysteresis) {
+    void loop(float targetTemp, float hysteresis, uint8_t mode) {
 
         float rawTemp = Thermistor::readRawCelsius();
         float tempC = Filter::apply(rawTemp);
         lastTemp = tempC;
 
-        // --- Heating hysteresis (your original logic) ---
+        // ---------------------------------------------------------
+        // HYSTERESIS STATE
+        // ---------------------------------------------------------
         static bool heating = false;
 
-        if (!heating && tempC < (targetTemp - hysteresis)) {
+        static float lastTarget = NAN;
+        static uint8_t lastMode = 255;
+
+        // ⭐ FIX: Reset hysteresis BEFORE computing delta
+        if (targetTemp != lastTarget || mode != lastMode) {
+            heating = true;   // <-- THIS is the critical fix
+            lastTarget = targetTemp;
+            lastMode = mode;
+        }
+
+        // Normal hysteresis logic
+        if (!heating && tempC < (targetTemp - hysteresis))
             heating = true;
-        }
 
-        if (heating && tempC > targetTemp) {
+        if (heating && tempC > targetTemp)
             heating = false;
-        }
 
-        // --- BOOST/CRUISE hysteresis (new logic) ---
-        static bool boostMode = false;
+        // ---------------------------------------------------------
+        // Compute delta AFTER hysteresis logic
+        // ---------------------------------------------------------
+        float delta = targetTemp - tempC;
 
-        float heatingEnter = targetTemp - hysteresis;
-        float boostEnter   = heatingEnter - hysteresis;  // reuse hysteresis
-        float boostExit    = heatingEnter;               // reuse hysteresis
-
-        if (heating) {
-            if (!boostMode && tempC < boostEnter)
-                boostMode = true;
-
-            if (boostMode && tempC > boostExit)
-                boostMode = false;
-        } else {
-            boostMode = false;  // safety: no boost when heating is off
-        }
-
-        // --- Output ---
-        uint8_t pwm;
-
+        // If hysteresis says "not heating", force delta negative
         if (!heating)
-            pwm = 0;
-        else if (boostMode)
-            pwm = 255;
-        else
-            pwm = Heater::cruisePWM;
+            delta = -999.0f;
 
-        Heater::setPWM(pwm);
-        lastPWM = pwm;
+        // ---------------------------------------------------------
+        // Heater logic
+        // ---------------------------------------------------------
+        Heater::apply(delta, mode);
+        lastPWM = Heater::getLastPWM();
 
-        // --- Debug print ---
+        // Debug
         static unsigned long lastPrint = 0;
         unsigned long now = millis();
         if (now - lastPrint > 500) {
             Serial.print("Temp: ");
             Serial.print(tempC);
             Serial.print(" C | PWM: ");
-            Serial.println(lastPWM);
+            Serial.print(lastPWM);
+            Serial.print(" | Mode: ");
+            Serial.print(mode);
+            Serial.print(" | Heating: ");
+            Serial.println(heating ? "YES" : "NO");
             lastPrint = now;
         }
     }
 
-
-    // ---------------------------------------------------------
-    // Debug accessors
-    // ---------------------------------------------------------
     float getLastTemperature() {
         return lastTemp;
     }

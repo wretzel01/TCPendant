@@ -9,7 +9,7 @@ namespace ThermalControl {
     void init(int thermPin, int heaterPin, float filterAlpha);
 
     // Main control loop
-    void loop(float targetTemp, float hysteresis);
+    void loop(float targetTemp, float hysteresis, uint8_t mode);
 
     // Accessors for debugging
     float getLastTemperature();

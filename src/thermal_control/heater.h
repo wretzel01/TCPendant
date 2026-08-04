@@ -11,16 +11,15 @@ namespace Heater {
     // Set heater PWM (0–255)
     void setPWM(uint8_t duty);
 
-    // Full power (255)
-    void onFull();
-
     // Cruise power (maintenance mode)
     extern uint8_t cruisePWM;
     void setCruisePWM(uint8_t duty);
-    void onCruise();
 
     // Turn heater off
     void off();
+
+    // Mode + temperature scaled heating
+    void apply(float delta, uint8_t mode);
 
     // Debug accessor
     uint8_t getLastPWM();

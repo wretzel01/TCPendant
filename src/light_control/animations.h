@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "colors.h"
+#include "palette.h"
 
 // ---------------------------------------------
 // Animation IDs
@@ -15,28 +16,32 @@ enum AnimationId : uint8_t {
     ANIM_RAINBOW = 6
 };
 
-
 // ---------------------------------------------
 // Animation state container
-// (each animation keeps its own phase/timers)
 // ---------------------------------------------
 struct AnimationState {
-    float phase = 0.0f;
+    uint16_t phase = 0;
     uint32_t lastUpdate = 0;
+
+    uint8_t lastIntensity = 255;     // flicker smoothing
+    uint8_t sparkleIntensity = 0;    // twinkle fade-out
+
+    Color lastColor = {0, 0, 0};     // return previous frame
+    Color lastPaletteColor;
 };
 
 // ---------------------------------------------
 // Animation API
 // ---------------------------------------------
 namespace Animations {
-
-    // Called once per frame
     Color run(AnimationId id, const Color& base);
 
-    // Individual animation functions
     Color breathe(const Color& base, AnimationState& s);
     Color pulse(const Color& base, AnimationState& s);
     Color flicker(const Color& base, AnimationState& s);
     Color twinkle(const Color& base, AnimationState& s);
     Color rainbow(AnimationState& s);
+
+    void setPalette(const Palette* pal);
 }
+

@@ -51,7 +51,7 @@ void loop() {
         targetTempC = BLEProtocol::getTargetTemp();
         uint8_t mode = BLEProtocol::getMode();
 
-        ThermalControl::loop(targetTempC, hysteresisC);
+        ThermalControl::loop(targetTempC, hysteresisC, mode);
 
         BLEProtocol::updateCurrentTemp(ThermalControl::getLastTemperature());
         BLEProtocol::updateCurrentPWM(ThermalControl::getLastPWM());
@@ -68,27 +68,37 @@ void loop() {
     // LED control routing (new LightControl API)
     // ---------------------------------------------------------
 
-    // Theme selection (enables theme mode)
-    LightControl::setTheme(BLEProtocol::getLEDTheme());
+    static ThemeId lastTheme = THEME_NONE;
+    static uint8_t lastR = 255, lastG = 191, lastB = 0;
+    static uint8_t lastBrightness = 255;
+    static AnimationId lastAnimation = ANIM_NONE;
 
-    // Raw RGB (enables raw mode if used)
-    LightControl::setColor(
-        BLEProtocol::getLED_R(),
-        BLEProtocol::getLED_G(),
-        BLEProtocol::getLED_B()
-    );
+    ThemeId newTheme = BLEProtocol::getLEDTheme();
+    if (newTheme != lastTheme) {
+        lastTheme = newTheme;
+        LightControl::setTheme(newTheme);
+    }
 
-    // Raw brightness (enables raw mode if used)
-    LightControl::setBrightness(
-        BLEProtocol::getLEDBrightness()
-    );
+    uint8_t r = BLEProtocol::getLED_R();
+    uint8_t g = BLEProtocol::getLED_G();
+    uint8_t b = BLEProtocol::getLED_B();
+    if (r != lastR || g != lastG || b != lastB) {
+        lastR = r; lastG = g; lastB = b;
+        LightControl::setColor(r, g, b);
+    }
 
-    // Raw animation (enables raw mode if used)
-    LightControl::setAnimation(
-        BLEProtocol::getLEDAnimation()
-    );
+    uint8_t brightness = BLEProtocol::getLEDBrightness();
+    if (brightness != lastBrightness) {
+        lastBrightness = brightness;
+        LightControl::setBrightness(brightness);
+    }
 
-    // LED update
+    AnimationId anim = BLEProtocol::getLEDAnimation();
+    if (anim != lastAnimation) {
+        lastAnimation = anim;
+        LightControl::setAnimation(anim);
+    }
+
     LightControl::loop();
 
     // Give NimBLE a chance even if CDC is misbehaving

@@ -34,3 +34,30 @@ export async function setLEDColor(device, r, g, b) {
     payload
   );
 }
+
+export async function setLEDBrightness(device, brightness) {
+  const payload = Buffer.from([brightness]).toString("base64");
+  await device.writeCharacteristicWithResponseForService(
+    SERVICE_UUID,
+    LED_BRIGHTNESS_UUID,
+    payload
+  );
+}
+
+export async function setLEDAnimation(device, animId) {
+  const payload = Buffer.from([animId]).toString("base64");
+  await device.writeCharacteristicWithResponseForService(
+    SERVICE_UUID,
+    LED_ANIMATION_UUID,
+    payload
+  );
+}
+
+export async function setLEDTheme(device, themeId) {
+  const payload = Buffer.from([themeId]).toString("base64");
+  await device.writeCharacteristicWithResponseForService(
+    SERVICE_UUID,
+    LED_THEME_UUID,
+    payload
+  );
+}

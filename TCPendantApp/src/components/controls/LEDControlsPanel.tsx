@@ -8,11 +8,13 @@ import LEDColorControls from './LEDColorControls';
 import LEDBrightnessControls from './LEDBrightnessControls';
 import LEDAnimationControls from './LEDAnimationControls';
 import LEDThemeControls from './LEDThemeControls';
+import { setLEDTheme } from '../../ble';
 
 export default function LEDControlsPanel() {
   const {
     device,
     setLEDColor,
+    setLEDTheme,
     setLEDBrightness,
     setLEDAnimation,
   } = useContext(BLEContext);
@@ -30,6 +32,10 @@ export default function LEDControlsPanel() {
 
       <Section title="Animations">
         <LEDAnimationControls device={device} setLEDAnimation={setLEDAnimation} />
+      </Section>
+
+      <Section title="Themes">
+        <LEDThemeControls device={device} setLEDTheme={setLEDTheme} />
       </Section>
 
     </View>

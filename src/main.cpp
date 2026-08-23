@@ -16,9 +16,12 @@ float hysteresisC   = 2.0;
 float filterAlpha   = 0.10;
 
 // Hardware pins
-const int THERM_PIN  = 2;
-const int HEATER_PIN = 3;
-const int LED_PIN    = 4;
+const int THERM_PIN  = 2; // Thermistor input pin
+const int HEATER_PIN = 3; // Heater control pin
+const int LED_PIN    = 4; // LED output pin
+const int SDA_PIN    = 5; // I2C SDA pin
+const int SCL_PIN    = 6; // I2C SCL pin
+const int TX_PIN     = 7; // UART TX pin
 
 // Loop timing
 const unsigned long LOOP_INTERVAL_MS = 100;
@@ -30,8 +33,7 @@ void setup() {
 
     Serial.println("\n=== Thermal Control v2 ===");
 
-    batteryMonitorInit();
-
+    BatteryMonitor::init(SDA_PIN, SCL_PIN);
     ThermalControl::init(THERM_PIN, HEATER_PIN, filterAlpha);
     BLEConnect::init();
     LightControl::init(LED_PIN);
@@ -100,6 +102,7 @@ void loop() {
     }
 
     LightControl::loop();
+    BatteryMonitor::loop();
 
     // Give NimBLE a chance even if CDC is misbehaving
     delay(1);

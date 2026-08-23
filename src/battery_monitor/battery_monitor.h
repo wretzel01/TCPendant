@@ -1,9 +1,12 @@
 #pragma once
 
-// High-level battery API for the rest of the firmware.
-// Now a safe placeholder until MAX17048 is integrated.
+namespace BatteryMonitor {
 
-void  batteryMonitorInit();
-float getBatteryVoltage();     // Volts
-float getBatteryCurrent();     // mA
-int   getBatteryPercent();     // 0–100%
+    void init(int sdaPin, int sclPin);
+    void loop();
+
+    float getVoltage();
+    float getCurrent();
+    int   getPercent();
+
+}

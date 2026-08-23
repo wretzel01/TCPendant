@@ -9,51 +9,47 @@ interface Props {
 interface ThemeOption {
   id: number;
   label: string;
-  colors: [string, string];
+  emoji: string;
 }
 
 const THEMES: ThemeOption[] = [
-  { id: 0, label: 'Amber', colors: ['#FF9500', '#FF5E00'] },
-  { id: 1, label: 'Fire', colors: ['#FF3B30', '#FF9500'] },
-  { id: 2, label: 'Ice', colors: ['#007AFF', '#5AC8FA'] },
-  { id: 3, label: 'Magic', colors: ['#AF52DE', '#5856D6'] },
-  { id: 4, label: 'Christmas', colors: ['#34C759', '#FF3B30'] },
-  { id: 5, label: 'Halloween', colors: ['#FF9500', '#AF52DE'] },
-  { id: 6, label: 'Valentine', colors: ['#FF2D55', '#FF375F'] },
-  { id: 7, label: 'Soft White', colors: ['#E5E5EA', '#FFD60A'] },
-  { id: 8, label: 'Rainbow', colors: ['#FF3B30', '#007AFF'] },
+  { id: 1, label: 'Amber', emoji: '🟠' },
+  { id: 2, label: 'Fire', emoji: '🔥' },
+  { id: 3, label: 'Ice', emoji: '❄️' },
+  { id: 4, label: 'Magic', emoji: '✨' },
+  { id: 5, label: 'Christmas', emoji: '🎄' },
+  { id: 6, label: 'Halloween', emoji: '🎃' },
+  { id: 7, label: 'Valentine', emoji: '💖' },
+  { id: 8, label: 'Soft White', emoji: '⚪' },
+  { id: 9, label: 'Rainbow', emoji: '🌈' },
 ];
 
 export default function LEDThemeControls({ device, setLEDTheme }: Props) {
-  const [selectedThemeId, setSelectedThemeId] = useState<number>(0);
+  const [selectedId, setSelectedId] = useState<number>(1);
 
-  const handleSelect = (themeId: number) => {
-    setSelectedThemeId(themeId);
-    setLEDTheme(device, themeId);
+  const handleSelect = (id: number) => {
+    setSelectedId(id);
+    setLEDTheme(device, id);
   };
 
   return (
     <View style={styles.container}>
-      {THEMES.map((t) => {
-        const isSelected = selectedThemeId === t.id;
+      {THEMES.map((theme) => {
+        const isSelected = selectedId === theme.id;
 
         return (
           <TouchableOpacity
-            key={t.id}
+            key={theme.id}
             activeOpacity={0.8}
-            onPress={() => handleSelect(t.id)}
+            onPress={() => handleSelect(theme.id)}
             style={[
-              styles.themePill,
-              isSelected && styles.selectedPill,
+              styles.chip,
+              isSelected && styles.selectedChip,
             ]}
           >
-            <View style={styles.previewContainer}>
-              <View style={[styles.colorDot, { backgroundColor: t.colors[0] }]} />
-              <View style={[styles.colorDot, { backgroundColor: t.colors[1], marginLeft: -5 }]} />
-            </View>
-
-            <Text style={[styles.label, isSelected && styles.selectedLabel]}>
-              {t.label}
+            <Text style={styles.emoji}>{theme.emoji}</Text>
+            <Text style={[styles.label, isSelected && styles.selectedText]}>
+              {theme.label}
             </Text>
           </TouchableOpacity>
         );
@@ -66,42 +62,34 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
     justifyContent: 'center',
     paddingVertical: 4,
   },
-  themePill: {
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
     paddingVertical: 10,
     paddingHorizontal: 14,
-    borderRadius: 20,
+    borderRadius: 18,
     backgroundColor: 'rgba(0, 0, 0, 0.25)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  selectedPill: {
+  selectedChip: {
     borderColor: '#FFFFFF',
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
   },
-  previewContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  colorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.4)',
+  emoji: {
+    fontSize: 14,
   },
   label: {
     color: '#8E8E93',
     fontSize: 13,
     fontWeight: '600',
   },
-  selectedLabel: {
+  selectedText: {
     color: '#FFFFFF',
   },
 });

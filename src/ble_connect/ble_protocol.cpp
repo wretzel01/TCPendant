@@ -125,10 +125,17 @@ uint32_t BLEProtocol::getCmdVersion() { return cmdVersion; }
 // ---------------------------------------------------------
 // Battery passthrough
 // ---------------------------------------------------------
-float BLEProtocol::getBatteryVoltage() { return getBatteryVoltage(); }
-float BLEProtocol::getBatteryCurrent() { return getBatteryCurrent(); }
-int   BLEProtocol::getBatteryPercent() { return getBatteryPercent(); }
+float BLEProtocol::getBatteryVoltage() {
+    return BatteryMonitor::getVoltage();
+}
 
+float BLEProtocol::getBatteryCurrent() {
+    return BatteryMonitor::getCurrent();
+}
+
+int BLEProtocol::getBatteryPercent() {
+    return BatteryMonitor::getPercent();
+}
 // ---------------------------------------------------------
 // Internal updates
 // ---------------------------------------------------------

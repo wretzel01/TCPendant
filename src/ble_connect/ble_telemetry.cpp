@@ -43,9 +43,9 @@ void BLETelemetry::sendPacket() {
     pkt.mode           = BLEProtocol::getMode();
     pkt.flags          = 0;
 
-    pkt.batteryVoltage = getBatteryVoltage();
-    pkt.batteryPercent = getBatteryPercent();
-    pkt.batteryCurrent = getBatteryCurrent();
+    pkt.batteryVoltage = BLEProtocol::getBatteryVoltage();
+    pkt.batteryPercent = BLEProtocol::getBatteryPercent();
+    pkt.batteryCurrent = BLEProtocol::getBatteryCurrent();
 
     pkt.ledR           = BLEProtocol::getLED_R();
     pkt.ledG           = BLEProtocol::getLED_G();

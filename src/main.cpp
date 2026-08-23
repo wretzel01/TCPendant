@@ -21,7 +21,6 @@ const int HEATER_PIN = 3; // Heater control pin
 const int LED_PIN    = 4; // LED output pin
 const int SDA_PIN    = 5; // I2C SDA pin
 const int SCL_PIN    = 6; // I2C SCL pin
-const int TX_PIN     = 7; // UART TX pin
 
 // Loop timing
 const unsigned long LOOP_INTERVAL_MS = 100;
